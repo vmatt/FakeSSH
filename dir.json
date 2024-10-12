@@ -1,0 +1,262 @@
+{
+  "root": "/var/www/html",
+  "subnodes": [
+    {
+      "name": "index.html",
+      "type": "file"
+    },
+    {
+      "name": "index.php",
+      "type": "file"
+    },
+    {
+      "name": ".htaccess",
+      "type": "file"
+    },
+    {
+      "name": "robots.txt",
+      "type": "file"
+    },
+    {
+      "name": "favicon.ico",
+      "type": "file"
+    },
+    {
+      "name": "public_html",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "images",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "logo.png",
+              "type": "file"
+            },
+            {
+              "name": "hospital_building.jpg",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": "css",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "style.css",
+              "type": "file"
+            },
+            {
+              "name": "responsive.css",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": "js",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "app.js",
+              "type": "file"
+            },
+            {
+              "name": "jquery.min.js",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "logs",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "access.log",
+          "type": "file"
+        },
+        {
+          "name": "error.log",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "name": "cgi-bin",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "appointment_script.cgi",
+          "type": "file"
+        },
+        {
+          "name": "billing_script.cgi",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "name": "config.php",
+      "type": "file"
+    },
+    {
+      "name": ".env",
+      "type": "file"
+    },
+    {
+      "name": "wp-config.php",
+      "type": "file"
+    },
+    {
+      "name": "appointments",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "appointment_details.php",
+          "type": "file"
+        },
+        {
+          "name": "schedule_appointment.php",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "name": "patients",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "patient_records.php",
+          "type": "file"
+        },
+        {
+          "name": "profile_pictures",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "patient1.jpg",
+              "type": "file"
+            },
+            {
+              "name": "patient2.jpg",
+              "type": "file"
+            }
+          ]
+        },
+        {
+          "name": "medical_reports",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "report_12345.pdf",
+              "type": "file"
+            },
+            {
+              "name": "report_67890.pdf",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "doctors",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "doctor_profiles.php",
+          "type": "file"
+        },
+        {
+          "name": "schedule.php",
+          "type": "file"
+        },
+        {
+          "name": "doctors_images",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "doctor1.jpg",
+              "type": "file"
+            },
+            {
+              "name": "doctor2.jpg",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "billing",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "generate_invoice.php",
+          "type": "file"
+        },
+        {
+          "name": "payment_gateway.php",
+          "type": "file"
+        },
+        {
+          "name": "invoices",
+          "type": "directory",
+          "subnodes": [
+            {
+              "name": "invoice_12345.pdf",
+              "type": "file"
+            },
+            {
+              "name": "invoice_67890.pdf",
+              "type": "file"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "user_management",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "register_user.php",
+          "type": "file"
+        },
+        {
+          "name": "login.php",
+          "type": "file"
+        },
+        {
+          "name": "logout.php",
+          "type": "file"
+        },
+        {
+          "name": "forgot_password.php",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "name": "api",
+      "type": "directory",
+      "subnodes": [
+        {
+          "name": "get_patient_data.php",
+          "type": "file"
+        },
+        {
+          "name": "get_appointments.php",
+          "type": "file"
+        },
+        {
+          "name": "get_doctors.php",
+          "type": "file"
+        }
+      ]
+    }
+  ]
+}
+
