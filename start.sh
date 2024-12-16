@@ -29,10 +29,8 @@ check_tmux() {
         echo "tmux is not installed"
         echo "Attempting to install tmux..."
         if [ "$PKG_MANAGER" = "apt" ]; then
-            sudo apt update
             $PKG_INSTALL tmux
         elif [ "$PKG_MANAGER" = "yum" ]; then
-            sudo yum check-update
             $PKG_INSTALL tmux
         fi
         
