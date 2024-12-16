@@ -131,14 +131,18 @@ def command_handler(cmd):
 def handle_client(client_socket, addr):
     client_ip = addr[0]
     last_activity = time.time()
-    transport = paramiko.Transport(client_socket)
-    transport.add_server_key(host_key)
-    server = SSHHoneypot(client_ip)
-    
-    # Log the connection with IP
-    logging.info(f"{client_ip} - Connected (version {transport.remote_version})")
-
+    transport = None
     try:
+        transport = paramiko.Transport(client_socket)
+        transport.add_server_key(host_key)
+        server = SSHHoneypot(client_ip)
+
+        # Set a timeout for the SSH banner exchange
+        transport.banner_timeout = 10
+        transport.handshake_timeout = 10
+        
+        # Log the connection with IP
+        logging.info(f"{client_ip} - Connected (version {transport.remote_version})")
         transport.start_server(server=server)
         chan = transport.accept(20) 
 
@@ -230,10 +234,34 @@ def handle_client(client_socket, addr):
             except Exception as e:
                 logging.debug(f"Error: {e}")
                 break
+    except paramiko.SSHException as e:
+        logging.warning(f"{client_ip} - SSH Protocol error: {str(e)}")
+    except EOFError:
+        logging.warning(f"{client_ip} - Client disconnected during handshake")
+    except socket.error as e:
+        logging.warning(f"{client_ip} - Socket error: {str(e)}")
+    except paramiko.AuthenticationException as e:
+        logging.warning(f"{client_ip} - Authentication failed: {str(e)}")
+    except paramiko.BadAuthenticationType as e:
+        logging.warning(f"{client_ip} - Bad authentication type: {str(e)}")
+    except paramiko.ChannelException as e:
+        logging.warning(f"{client_ip} - Channel error: {str(e)}")
+    except UnicodeDecodeError as e:
+        logging.warning(f"{client_ip} - Invalid UTF-8 data received: {str(e)}")
+    except ConnectionResetError:
+        logging.warning(f"{client_ip} - Connection reset by peer")
+    except TimeoutError:
+        logging.warning(f"{client_ip} - Connection timed out")
     except Exception as e:
-        logging.debug(f"Exception: {e}")
+        logging.error(f"{client_ip} - Unexpected error: {str(e)}", exc_info=True)
     finally:
-        transport.close()
+        try:
+            if transport:
+                transport.close()
+            if client_socket:
+                client_socket.close()
+        except Exception as e:
+            logging.error(f"{client_ip} - Error during cleanup: {str(e)}")
 
 def start_honeypot():
     host="0.0.0.0"
