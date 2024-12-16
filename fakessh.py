@@ -2,6 +2,7 @@ import socket
 import paramiko
 import threading
 import sys
+import time
 import logging
 import file_read
 import fake_uname
@@ -9,17 +10,25 @@ import diskfile
 import sudo_cmd
 
 # Configure logging
-logging.basicConfig(
-    filename='ssh.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# File handler for ssh.log
+file_handler = logging.FileHandler('ssh.log')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
+
+# Console handler for stdout
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+console_handler.setFormatter(logging.Formatter('%(message)s'))
+
+# Configure root logger
+logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().addHandler(file_handler)
+logging.getLogger().addHandler(console_handler)
 
 pwd = ["/var/www/html"]
 
 def home_logo():
-    print("""
+    logging.debug("""
         ####   ##     ##      ###        #####      #######     ####### 
          ##    ##     ##     ## ##      ##   ##    ##     ##   ##     ##
          ##    ##     ##    ##   ##    ##     ##   ##     ##   ##     ##
@@ -34,8 +43,9 @@ IHA089: Navigating the Digital Realm with Code and Security - Where Programming 
 host_key = paramiko.RSAKey(filename='RSA_PRIVATE.key', password='FakeSSH')
 
 class SSHHoneypot(paramiko.ServerInterface):
-    def __init__(self):
+    def __init__(self, client_ip):
         self.event = threading.Event()
+        self.client_ip = client_ip
 
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
@@ -43,9 +53,13 @@ class SSHHoneypot(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_auth_password(self, username, password):
-        logging.info(f"Login attempt - Username: {username}, Password: {password}")
-        print(f"[+] {username} successfully logged in with {password}")
+        logging.info(f"{self.client_ip} - Username: {username}, Password: {password}")
+        logging.info(f"{self.client_ip} - Auth granted (password)")
         return paramiko.AUTH_SUCCESSFUL
+
+    def get_allowed_auths(self, username):
+        logging.info(f"{self.client_ip} - Auth rejected (none)")
+        return "password"
 
     def get_allowed_auths(self, username):
         return "password"
@@ -111,24 +125,29 @@ def command_handler(cmd):
         return f"\r\nCommand '{cmd}' not found\r\n$ "
         
 
-def handle_client(client_socket):
+def handle_client(client_socket, addr):
+    client_ip = addr[0]
+    last_activity = time.time()
     transport = paramiko.Transport(client_socket)
     transport.add_server_key(host_key)
-    server = SSHHoneypot()
+    server = SSHHoneypot(client_ip)
+    
+    # Log the connection with IP
+    logging.info(f"{client_ip} - Connected (version {transport.remote_version})")
 
     try:
         transport.start_server(server=server)
         chan = transport.accept(20) 
 
         if chan is None:
-            print("[-] No channel request")
+            logging.debug("[-] No channel request")
             return
 
-        print("[+] Channel opened")
+        logging.debug("[+] Channel opened")
         server.event.wait(10) 
 
         if not server.event.is_set():
-            print("[-] No shell request")
+            logging.debug("[-] No shell request")
             return
 
         chan.send("$ ")
@@ -137,7 +156,19 @@ def handle_client(client_socket):
 
         while True:
             try:
-                data = chan.recv(1024).decode('utf-8')
+                # Check for timeout
+                if time.time() - last_activity > 60:  # 60 seconds timeout
+                    logging.info(f"{server.client_ip} - Connection timed out after 60 seconds of inactivity")
+                    chan.send("\r\nConnection timed out due to inactivity\r\n")
+                    break
+
+                # Set socket timeout to allow checking for inactivity
+                chan.settimeout(1.0)
+                try:
+                    data = chan.recv(1024).decode('utf-8')
+                    last_activity = time.time()  # Update activity timestamp
+                except socket.timeout:
+                    continue
 
                 if not data:
                     break
@@ -145,10 +176,9 @@ def handle_client(client_socket):
                 if data == '\r' or data == '\n':
                     command = command_buffer.strip()  
                     if command:
-                        print(f"Command received: {command}")
-                        logging.info(f"Command executed: {command}")
+                        logging.info(f"{server.client_ip}: {command}")
                         if command == "exit":
-                            logging.info("Client attempted to exit - starting warning message stream")
+                            logging.info(f"{server.client_ip} - Client attempted to exit - starting warning message stream")
                             import random
                             import string
 
@@ -178,12 +208,11 @@ def handle_client(client_socket):
                                 try:
                                     bytes_sent = chan.send(warning_msg)
                                     total_sent += bytes_sent
-                                    logging.info(f"Sent warning message chunk, total: {total_sent}/{max_size} bytes")
                                 except Exception as e:
                                     logging.error(f"Error sending data: {e}")
                                     break
                             
-                            logging.info(f"Reached {total_sent} bytes sent, closing connection")
+                            logging.info(f"{server.client_ip} - closing connection")
                             chan.close()
                             transport.close()
                             break
@@ -196,10 +225,10 @@ def handle_client(client_socket):
                     chan.send(data)
 
             except Exception as e:
-                print(f"Error: {e}")
+                logging.debug(f"Error: {e}")
                 break
     except Exception as e:
-        print(f"Exception: {e}")
+        logging.debug(f"Exception: {e}")
     finally:
         transport.close()
 
@@ -211,18 +240,18 @@ def start_honeypot():
     server_socket.bind((host, port))
     server_socket.listen(5)
 
-    print(f"[+] SSH Honeypot running on {host}:{port}")
+    logging.debug(f"[+] SSH Honeypot running on {host}:{port}")
 
     Ratan = True
     while Ratan:
         try:
             client_socket, addr = server_socket.accept()
-            print(f"[+] Connection from {addr}")
-            client_thread = threading.Thread(target=handle_client, args=(client_socket,))
+            logging.debug(f"[+] Connection from {addr}")
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, addr))
             client_thread.start()
         except KeyboardInterrupt:
             Ratan = False
-            print("Exiting....")
+            logging.debug("Exiting....")
             sys.exit()
     sys.exit()
 
