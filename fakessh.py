@@ -183,7 +183,7 @@ def handle_client(client_socket, addr):
                 if data == '\r' or data == '\n':
                     command = command_buffer.strip()  
                     if command:
-                        logging.info(f"{server.client_ip}: {command}")
+                        logging.info(f"{server.client_ip}: command: {command}")
                         if command == "exit":
                             logging.info(f"{server.client_ip} - Client attempted to exit - starting warning message stream")
                             import random
@@ -234,24 +234,24 @@ def handle_client(client_socket, addr):
             except Exception as e:
                 logging.debug(f"Error: {e}")
                 break
+    except paramiko.BadAuthenticationType as e:
+        logging.warning(f"{client_ip} - Bad authentication type: {str(e)}")
+    except paramiko.AuthenticationException as e:
+        logging.warning(f"{client_ip} - Authentication failed: {str(e)}")
+    except paramiko.ChannelException as e:
+        logging.warning(f"{client_ip} - Channel error: {str(e)}")
     except paramiko.SSHException as e:
         logging.warning(f"{client_ip} - SSH Protocol error: {str(e)}")
     except EOFError:
         logging.warning(f"{client_ip} - Client disconnected during handshake")
+    except TimeoutError:
+        logging.warning(f"{client_ip} - Connection timed out")
     except socket.error as e:
         logging.warning(f"{client_ip} - Socket error: {str(e)}")
-    except paramiko.AuthenticationException as e:
-        logging.warning(f"{client_ip} - Authentication failed: {str(e)}")
-    except paramiko.BadAuthenticationType as e:
-        logging.warning(f"{client_ip} - Bad authentication type: {str(e)}")
-    except paramiko.ChannelException as e:
-        logging.warning(f"{client_ip} - Channel error: {str(e)}")
     except UnicodeDecodeError as e:
         logging.warning(f"{client_ip} - Invalid UTF-8 data received: {str(e)}")
     except ConnectionResetError:
         logging.warning(f"{client_ip} - Connection reset by peer")
-    except TimeoutError:
-        logging.warning(f"{client_ip} - Connection timed out")
     except Exception as e:
         logging.error(f"{client_ip} - Unexpected error: {str(e)}", exc_info=True)
     finally:
