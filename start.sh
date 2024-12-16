@@ -22,17 +22,36 @@ detect_os() {
     fi
 }
 
-# Check if screen is installed
-check_screen() {
-    if ! command -v screen &> /dev/null; then
-        echo "Error: screen is not installed"
-        echo "Installing screen..."
-        $PKG_INSTALL screen
-        if [ $? -ne 0 ]; then
-            echo "Failed to install screen. Please install it manually."
+# Check and install tmux
+check_tmux() {
+    echo "Checking tmux installation..."
+    if ! command -v tmux &> /dev/null; then
+        echo "tmux is not installed"
+        echo "Attempting to install tmux..."
+        if [ "$PKG_MANAGER" = "apt" ]; then
+            sudo apt update
+            $PKG_INSTALL tmux
+        elif [ "$PKG_MANAGER" = "yum" ]; then
+            sudo yum check-update
+            $PKG_INSTALL tmux
+        fi
+        
+        # Verify installation
+        if ! command -v tmux &> /dev/null; then
+            echo "Failed to install tmux automatically."
+            echo "Please install tmux manually using one of these commands:"
+            echo "  Debian/Ubuntu: sudo apt install tmux"
+            echo "  RHEL/CentOS:  sudo yum install tmux"
             exit 1
         fi
+        echo "tmux installed successfully!"
+    else
+        echo "tmux is already installed"
     fi
+    
+    # Check tmux version
+    TMUX_VERSION=$(tmux -V | cut -d' ' -f2)
+    echo "tmux version: $TMUX_VERSION"
 }
 
 # Check if RSA key exists
@@ -43,30 +62,30 @@ check_key() {
     fi
 }
 
-# Start honeypot in screen session
+# Start honeypot in tmux session
 start_honeypot() {
     SESSION_NAME="honeypot"
     
     # Check if session already exists
-    if screen -list | grep -q "$SESSION_NAME"; then
-        echo "Honeypot is already running in a screen session"
-        echo "To attach to it, use: screen -r $SESSION_NAME"
+    if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+        echo "Honeypot is already running in a tmux session"
+        echo "To attach to it, use: tmux attach -t $SESSION_NAME"
         exit 0
     fi
     
-    echo "Starting honeypot in screen session..."
-    screen -dmS "$SESSION_NAME" sudo python3 fakessh.py
-    echo "Honeypot started in background screen session"
+    echo "Starting honeypot in tmux session..."
+    tmux new-session -d -s "$SESSION_NAME" "sudo python3 fakessh.py"
+    echo "Honeypot started in background tmux session"
     echo "To view the honeypot:"
-    echo "  - Attach to screen: screen -r $SESSION_NAME"
-    echo "  - Detach from screen: Ctrl+A, then D"
-    echo "  - Kill the session: Ctrl+A, then K"
+    echo "  - Attach to session: tmux attach -t $SESSION_NAME"
+    echo "  - Detach from session: Ctrl+B, then D"
+    echo "  - Kill the session: tmux kill-session -t $SESSION_NAME"
 }
 
 # Main execution
 detect_os
 echo "Detected OS: $OS"
 echo "Using package manager: $PKG_MANAGER"
-check_screen
+check_tmux
 check_key
 start_honeypot

@@ -149,22 +149,34 @@ def handle_client(client_socket):
                         logging.info(f"Command executed: {command}")
                         if command == "exit":
                             logging.info("Client attempted to exit - starting warning message stream")
-                            warning_msg = """
-⚠️ WARNING: UNAUTHORIZED ACCESS DETECTED ⚠️
-🚫 Stop attempting to hack random servers! 🚫
-🔒 Your actions are being monitored and logged 🔒
-🚔 Cybercrime is a serious offense 🚔
-💻 Use your skills ethically - Learn cybersecurity legally 💻
-"""
+                            import random
+                            import string
+
+                            warning_msg = (
+                                "⚠️ WARNING UNAUTHORIZED ACCESS DETECTED ⚠️\n"
+                                "🚫 STOP ATTEMPTING TO HACK RANDOM SERVERS 🚫\n"
+                                "🔒 YOUR ACTIONS ARE BEING MONITORED AND LOGGED 🔒\n"
+                                "🚔 CYBERCRIME IS A SERIOUS OFFENSE 🚔\n"
+                                "💻 USE YOUR SKILLS ETHICALLY - LEARN CYBERSECURITY LEGALLY 💻\n"
+                            )
+                            def create_warning_line(line):
+                                words = line.split()
+                                if not words:
+                                    return line
+                                special_chars = 'ŘßąŔŁļŠ¥§ŦŽĶ@#$'
+                                result = words[0]
+                                for word in words[1:]:
+                                    rand_chars = ''.join(random.choice(special_chars) for _ in range(3))
+                                    result += f" {rand_chars} {word}"
+                                return result + "\n"
+
+                            warning_msg = ''.join(create_warning_line(line) for line in warning_msg.splitlines() if line.strip())
                             total_sent = 0
                             max_size = 1024 * 1024  # 1MB in bytes
-                            
+
                             while total_sent < max_size:
                                 try:
-                                    # Mix warning message with random characters
-                                    garbage = ''.join(chr((i * 7 + 33) % 126) for i in range(100))
-                                    chunk = warning_msg + garbage + "\n"
-                                    bytes_sent = chan.send(chunk)
+                                    bytes_sent = chan.send(warning_msg)
                                     total_sent += bytes_sent
                                     logging.info(f"Sent warning message chunk, total: {total_sent}/{max_size} bytes")
                                 except Exception as e:
@@ -193,7 +205,7 @@ def handle_client(client_socket):
 
 def start_honeypot():
     host="0.0.0.0"
-    port=22
+    port=2222
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((host, port))
