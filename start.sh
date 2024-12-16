@@ -7,12 +7,10 @@ detect_os() {
         if [[ "$ID_LIKE" == *"debian"* ]]; then
             OS="Debian-based"
             PKG_MANAGER="apt"
-            PKG_UPDATE="sudo apt update"
             PKG_INSTALL="sudo apt install -y"
         elif [[ "$ID_LIKE" == *"rhel"* ]] || [[ "$ID_LIKE" == *"fedora"* ]] || [[ "$ID_LIKE" == *"centos"* ]]; then
             OS="RHEL-based"
             PKG_MANAGER="yum"
-            PKG_UPDATE="sudo yum update"
             PKG_INSTALL="sudo yum install -y"
         else
             echo "Unsupported OS type: $ID_LIKE"
@@ -29,7 +27,6 @@ check_screen() {
     if ! command -v screen &> /dev/null; then
         echo "Error: screen is not installed"
         echo "Installing screen..."
-        $PKG_UPDATE
         $PKG_INSTALL screen
         if [ $? -ne 0 ]; then
             echo "Failed to install screen. Please install it manually."
