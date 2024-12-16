@@ -284,7 +284,7 @@ def start_honeypot():
             client_thread.start()
         except KeyboardInterrupt:
             logging.debug("Exiting....")
-            server_socket.close()
+            Ratan = False
             sys.exit()
             break
         except Exception as e:
