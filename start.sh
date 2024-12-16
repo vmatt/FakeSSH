@@ -72,12 +72,26 @@ start_honeypot() {
     fi
     
     echo "Starting honeypot in tmux session..."
-    tmux new-session -d -s "$SESSION_NAME" "sudo python3 fakessh.py"
+    tmux new-session -d -s "$SESSION_NAME" "python3 fakessh.py"
     echo "Honeypot started in background tmux session"
     echo "To view the honeypot:"
     echo "  - Attach to session: tmux attach -t $SESSION_NAME"
     echo "  - Detach from session: Ctrl+B, then D"
     echo "  - Kill the session: tmux kill-session -t $SESSION_NAME"
+}
+
+# Check virtual environment
+check_venv() {
+    if [ ! -d "honeypot" ]; then
+        echo "Virtual environment not found. Running install script..."
+        bash install.sh
+    fi
+}
+
+# Activate virtual environment
+activate_venv() {
+    echo "Activating virtual environment..."
+    source honeypot/bin/activate
 }
 
 # Main execution
@@ -86,4 +100,6 @@ echo "Detected OS: $OS"
 echo "Using package manager: $PKG_MANAGER"
 check_tmux
 check_key
+check_venv
+activate_venv
 start_honeypot
