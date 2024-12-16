@@ -1,16 +1,38 @@
 #!/bin/bash
 
+# Detect OS and set package manager
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [[ "$ID_LIKE" == *"debian"* ]]; then
+            OS="Debian-based"
+            PKG_MANAGER="apt"
+            PKG_UPDATE="sudo apt update"
+            PKG_INSTALL="sudo apt install -y"
+        elif [[ "$ID_LIKE" == *"rhel"* ]] || [[ "$ID_LIKE" == *"fedora"* ]] || [[ "$ID_LIKE" == *"centos"* ]]; then
+            OS="RHEL-based"
+            PKG_MANAGER="yum"
+            PKG_UPDATE="sudo yum update"
+            PKG_INSTALL="sudo yum install -y"
+        else
+            echo "Unsupported OS type: $ID_LIKE"
+            exit 1
+        fi
+    else
+        echo "Cannot detect OS type. /etc/os-release not found."
+        exit 1
+    fi
+}
+
 # Check if screen is installed
 check_screen() {
     if ! command -v screen &> /dev/null; then
         echo "Error: screen is not installed"
         echo "Installing screen..."
-        if command -v apt &> /dev/null; then
-            sudo apt update && sudo apt install -y screen
-        elif command -v yum &> /dev/null; then
-            sudo yum install -y screen
-        else
-            echo "Could not install screen. Please install it manually."
+        $PKG_UPDATE
+        $PKG_INSTALL screen
+        if [ $? -ne 0 ]; then
+            echo "Failed to install screen. Please install it manually."
             exit 1
         fi
     fi
@@ -45,6 +67,9 @@ start_honeypot() {
 }
 
 # Main execution
+detect_os
+echo "Detected OS: $OS"
+echo "Using package manager: $PKG_MANAGER"
 check_screen
 check_key
 start_honeypot
