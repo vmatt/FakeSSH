@@ -2,16 +2,19 @@ import socket
 import paramiko
 import threading
 import sys
+import logging
 import file_read
 import fake_uname
 import diskfile
 import sudo_cmd
 
-valid_credentials = {
-    'admin': 'admin',
-    'root': 'toor',
-    'user': 'password123'
-}
+# Configure logging
+logging.basicConfig(
+    filename='ssh.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 pwd = ["/var/www/html"]
 
@@ -40,11 +43,9 @@ class SSHHoneypot(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_auth_password(self, username, password):
-        if username in valid_credentials and valid_credentials[username] == password:
-            print(f"[+] {username} successfully logged in with {password}")
-            return paramiko.AUTH_SUCCESSFUL
-        print(f"[-] Invalid login attempt: {username}/{password}")
-        return paramiko.AUTH_FAILED
+        logging.info(f"Login attempt - Username: {username}, Password: {password}")
+        print(f"[+] {username} successfully logged in with {password}")
+        return paramiko.AUTH_SUCCESSFUL
 
     def get_allowed_auths(self, username):
         return "password"
@@ -130,7 +131,7 @@ def handle_client(client_socket):
             print("[-] No shell request")
             return
 
-        chan.send("Welcome to the SSH Honeypot!\r\n$ ")
+        chan.send("$ ")
 
         command_buffer = ""
 
@@ -145,8 +146,38 @@ def handle_client(client_socket):
                     command = command_buffer.strip()  
                     if command:
                         print(f"Command received: {command}")
-                        data = command_handler(command)
-                        chan.send(data)
+                        logging.info(f"Command executed: {command}")
+                        if command == "exit":
+                            logging.info("Client attempted to exit - starting warning message stream")
+                            warning_msg = """
+⚠️ WARNING: UNAUTHORIZED ACCESS DETECTED ⚠️
+🚫 Stop attempting to hack random servers! 🚫
+🔒 Your actions are being monitored and logged 🔒
+🚔 Cybercrime is a serious offense 🚔
+💻 Use your skills ethically - Learn cybersecurity legally 💻
+"""
+                            total_sent = 0
+                            max_size = 1024 * 1024  # 1MB in bytes
+                            
+                            while total_sent < max_size:
+                                try:
+                                    # Mix warning message with random characters
+                                    garbage = ''.join(chr((i * 7 + 33) % 126) for i in range(100))
+                                    chunk = warning_msg + garbage + "\n"
+                                    bytes_sent = chan.send(chunk)
+                                    total_sent += bytes_sent
+                                    logging.info(f"Sent warning message chunk, total: {total_sent}/{max_size} bytes")
+                                except Exception as e:
+                                    logging.error(f"Error sending data: {e}")
+                                    break
+                            
+                            logging.info(f"Reached {total_sent} bytes sent, closing connection")
+                            chan.close()
+                            transport.close()
+                            break
+                        else:
+                            data = command_handler(command)
+                            chan.send(data)
                     command_buffer = ""  
                 else:
                     command_buffer += data
@@ -161,7 +192,7 @@ def handle_client(client_socket):
         transport.close()
 
 def start_honeypot():
-    host=input("Enter your IP : ")
+    host="0.0.0.0"
     port=22
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
