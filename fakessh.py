@@ -136,22 +136,24 @@ def handle_client(client_socket, addr):
         transport = paramiko.Transport(client_socket)
         transport.add_server_key(host_key)
         server = SSHHoneypot(client_ip)
-
-        # Set a timeout for the SSH banner exchange
-        transport.banner_timeout = 10
-        transport.handshake_timeout = 10
         
-        # Log the connection with IP
-        logging.info(f"{client_ip} - Connected (version {transport.remote_version})")
-        transport.start_server(server=server)
-        chan = transport.accept(20) 
-
-        if chan is None:
-            logging.debug("[-] No channel request")
+        try:
+            transport.start_server(server=server)
+            logging.info(f"{client_ip} - Connected (version {transport.remote_version})")
+            chan = transport.accept(20)
+            if chan is None:
+                logging.debug(f"{client_ip} - No channel request")
+                return
+            
+            logging.debug("[+] Channel opened")
+            server.event.wait(10)
+        except paramiko.ssh_exception.SSHException as e:
+            logging.warning(f"{client_ip} - SSH protocol error during server start: {str(e)}")
+            return
+        except EOFError:
+            logging.warning(f"{client_ip} - Client disconnected during channel setup")
             return
 
-        logging.debug("[+] Channel opened")
-        server.event.wait(10) 
 
         if not server.event.is_set():
             logging.debug("[-] No shell request")
@@ -281,9 +283,13 @@ def start_honeypot():
             client_thread = threading.Thread(target=handle_client, args=(client_socket, addr))
             client_thread.start()
         except KeyboardInterrupt:
-            Ratan = False
             logging.debug("Exiting....")
+            server_socket.close()
             sys.exit()
+            break
+        except Exception as e:
+            logging.error(f"Error accepting connection: {e}")
+
     sys.exit()
 
 if __name__ == "__main__":
