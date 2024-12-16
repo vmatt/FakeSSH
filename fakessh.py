@@ -18,12 +18,15 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s', '%Y-%m-
 # Console handler for stdout
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.DEBUG)
-console_handler.setFormatter(logging.Formatter('%(message)s'))
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
 
 # Configure root logger
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger().addHandler(file_handler)
 logging.getLogger().addHandler(console_handler)
+
+# Suppress Paramiko logging
+logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 pwd = ["/var/www/html"]
 
