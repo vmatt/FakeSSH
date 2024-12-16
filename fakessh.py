@@ -4,10 +4,6 @@ import threading
 import sys
 import time
 import logging
-import file_read
-import fake_uname
-import diskfile
-import sudo_cmd
 
 # Configure logging
 # File handler for ssh.log
@@ -28,18 +24,8 @@ logging.getLogger().addHandler(console_handler)
 # Suppress Paramiko logging
 logging.getLogger('paramiko').setLevel(logging.WARNING)
 
-pwd = ["/var/www/html"]
-
 def home_logo():
     logging.debug("""
-        ####   ##     ##      ###        #####      #######     ####### 
-         ##    ##     ##     ## ##      ##   ##    ##     ##   ##     ##
-         ##    ##     ##    ##   ##    ##     ##   ##     ##   ##     ##
-         ##    #########   ##     ##   ##     ##    #######     ########
-         ##    ##     ##   #########   ##     ##   ##     ##          ##
-         ##    ##     ##   ##     ##    ##   ##    ##     ##   ##     ##
-        ####   ##     ##   ##     ##     #####      #######     #######
-    
 IHA089: Navigating the Digital Realm with Code and Security - Where Programming Insights Meet Cyber Vigilance.
     """)
 
@@ -74,63 +60,9 @@ class SSHHoneypot(paramiko.ServerInterface):
         self.event.set()  
         return True
 
-def get_pwd():
-    return pwd[0]
-
-def change_directory(cmd):
-    spl = cmd.split(" ")
-    if spl[1] == "..":
-        if pwd[0] == "/var/www/html":
-            return f"\r\n$ "
-        else:
-            spl_pwd = pwd[0].split("/")
-            pwd_len = len(spl_pwd)
-            c_pwd=""
-            for i in range(1, pwd_len-1):
-                c_pwd = c_pwd+"/"+spl_pwd[i]
-                pwd[0] = c_pwd
-            return f"\r\n$ "
-    elif spl[1] == "":
-        pwd[0] = "/var/www/html"
-        return f"\r\n$ "
-    else:
-        dir_name = spl[1]
-        alf = file_read.change_directory(dir_name)
-        print(alf)
-        if isinstance(alf, dict):
-            pwd[0]=pwd[0]+"/"+dir_name
-            return f"\r\n$ "
-        return f"\r\n{alf}\r\n$ "
-
-
-def command_handler(cmd):
-    if cmd == "pwd":
-        return f"\r\n{get_pwd()} \r\n$ "
-    elif cmd == "ls":
-        pswd = get_pwd()
-        files = file_read.Dir_Handler(pswd)
-        return f"\r\n{files} \r\n$ "
-    elif "cd " in cmd:
-        return change_directory(cmd)
-    elif cmd == "uname" or cmd == "uname -a" or cmd == "uname -s" or cmd == "uname -n" or cmd == "uname -r" or cmd == "uname -v" or cmd == "uname -m" or cmd == "uname -p" or cmd == "uname -i" or cmd == "uname -o":
-        output = fake_uname.uname_handle(cmd)
-        return f"\r\n{output} \r\n$ "
-    elif cmd == "df -h":
-        output = diskfile.disk_handler()
-        return f"\r\n{output} \r\n$ "
-    elif cmd == "free" or cmd == "free -b" or cmd == "free -k" or cmd == "free -m" or cmd == "free -g" or cmd == "free -h" or cmd == "free -l" or cmd == "free -L" or cmd == "free -t" or cmd == "free -c":
-        output = diskfile.memory_haneler()
-        return f"\r\n{output} \r\n$ "
-    elif "sudo apt" in cmd or "apt install" in cmd or "apt remove" in cmd or "apt update" in cmd or "apt upgrade" in cmd:
-        output = sudo_cmd.cmd_response()
-        return f"\r\n{output} \r\n$ "
-    else:
-        return f"\r\nCommand '{cmd}' not found\r\n$ "
-        
 
 def handle_client(client_socket, addr):
     client_ip = addr[0]
-    last_activity = time.time()
     transport = None
     try:
         transport = paramiko.Transport(client_socket)
@@ -161,81 +93,37 @@ def handle_client(client_socket, addr):
 
         chan.send("$ ")
 
-        command_buffer = ""
 
-        while True:
-            try:
-                # Check for timeout
-                if time.time() - last_activity > 60:  # 60 seconds timeout
-                    logging.info(f"{server.client_ip} - Connection timed out after 60 seconds of inactivity")
-                    chan.send("\r\nConnection timed out due to inactivity\r\n")
-                    break
+        # Send warning message immediately
+        warning_msg = (
+            "\r\n"
+            "⠀⠀⠀⠀⠀⣠⠶⠚⠛⠛⠛⠲⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⠀⠀⠀⣴⠟⠁⠀⠀⠀⠀⠀⠀⠀⠻⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⠀⣠⣾⣷⣄⠀⠀⠀⢀⣠⣤⣤⡀⠀⢿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⢸⣿⡿⢃⣸⡶⠂⢠⣿⣿⡿⠁⣱⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⢸⡏⠉⠩⣏⣐⣦⠀⠛⠦⠴⠚⠁⠀⣸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⣼⠧⠶⠶⠶⠿⠶⠶⠖⠚⠛⠉⠁⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⠶⠶⡄⠀⠀\r\n"
+            "⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟⠀⠀⢹⠀⠀\r\n"
+            "⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⢤⢠⡆⠀⢸⡄⠀⠀⠀⠀⠀⠀⢀⡿⠁⠀⠀⡾⠀⠀\r\n"
+            "⢹⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠈⡇⠀⠸⣧⣠⠴⠶⠖⠲⢶⡞⠁⠀⢈⡼⢃⠀⠀\r\n"
+            "⠸⡆⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⡇⠀⠀⢿⠁⠄⣲⡶⠶⠿⢤⣄⡀⠛⢛⠉⢻⠀\r\n"
+            "⠀⢿⡀⠀⠀⠀⠀⠀⠀⠀⢸⠠⣇⠀⠀⠀⠀⠊⠁⠀⠀⠀⠀⠀⠙⢦⠈⠙⠓⣆\r\n"
+            "⠀⠈⢷⡀⠀⠀⠀⠀⠀⢠⠏⡀⣬⣹⣦⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠈⡿⠶⠶⠋\r\n"
+            "⠀⠀⠈⢷⡀⠀⠀⠀⠀⠘⠛⠛⠋⠀⠀⠀⠀⠀⠀⠄⠀⠀⠀⠀⠀⣼⠃⠀⠀⠀\r\n"
+            "⠀⠀⠀⠀⠙⢦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⠀⣠⡞⠁⠀⠀⠀⠀\r\n"
+            "⠀⠀⠀⠀⠀⠀⠈⠛⣷⢶⣦⣤⣄⣀⣠⣤⣤⠀⣶⠶⠶⠶⠛⠁⠀⠀⠀⠀⠀⠀\r\n"
+            "⠀⠀⠀⠀⣀⡀⠀⣰⠇⣾⠀⠀⠈⣩⣥⣄⣿⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⠀⠀⠀⠀⢿⡉⠳⡟⣸⠃⠀⠀⠀⠘⢷⣌⠉⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "⠀⠀⠀⠀⠀⠙⢦⣴⠏⠀⠀⠀⠀⠀⠀⠉⠳⠶⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀\r\n"
+            "\r\n"
+            "WARNING: Unauthorized Access Detected - All Activities Are Being Monitored and Logged\r\n"
+        )
 
-                # Set socket timeout to allow checking for inactivity
-                chan.settimeout(1.0)
-                try:
-                    data = chan.recv(1024).decode('utf-8')
-                    last_activity = time.time()  # Update activity timestamp
-                except socket.timeout:
-                    continue
+        chan.send(warning_msg)
+        logging.info(f"{server.client_ip} - Sent warning message and closing connection")
+        chan.close()
+        transport.close()
 
-                if not data:
-                    break
-
-                if data == '\r' or data == '\n':
-                    command = command_buffer.strip()  
-                    if command:
-                        logging.info(f"{server.client_ip}: command: {command}")
-                        if command == "exit":
-                            logging.info(f"{server.client_ip} - Client attempted to exit - starting warning message stream")
-                            import random
-                            import string
-
-                            warning_msg = (
-                                "⚠️ WARNING UNAUTHORIZED ACCESS DETECTED ⚠️\n"
-                                "🚫 STOP ATTEMPTING TO HACK RANDOM SERVERS 🚫\n"
-                                "🔒 YOUR ACTIONS ARE BEING MONITORED AND LOGGED 🔒\n"
-                                "🚔 CYBERCRIME IS A SERIOUS OFFENSE 🚔\n"
-                                "💻 USE YOUR SKILLS ETHICALLY - LEARN CYBERSECURITY LEGALLY 💻\n"
-                            )
-                            def create_warning_line(line):
-                                words = line.split()
-                                if not words:
-                                    return line
-                                special_chars = 'ŘßąŔŁļŠ¥§ŦŽĶ@#$'
-                                result = words[0]
-                                for word in words[1:]:
-                                    rand_chars = ''.join(random.choice(special_chars) for _ in range(3))
-                                    result += f" {rand_chars} {word}"
-                                return result + "\n"
-
-                            warning_msg = ''.join(create_warning_line(line) for line in warning_msg.splitlines() if line.strip())
-                            total_sent = 0
-                            max_size = 1024 * 1024  # 1MB in bytes
-
-                            while total_sent < max_size:
-                                try:
-                                    bytes_sent = chan.send(warning_msg)
-                                    total_sent += bytes_sent
-                                except Exception as e:
-                                    logging.error(f"Error sending data: {e}")
-                                    break
-                            
-                            logging.info(f"{server.client_ip} - closing connection")
-                            chan.close()
-                            transport.close()
-                            break
-                        else:
-                            data = command_handler(command)
-                            chan.send(data)
-                    command_buffer = ""  
-                else:
-                    command_buffer += data
-                    chan.send(data)
-
-            except Exception as e:
-                logging.debug(f"Error: {e}")
-                break
     except paramiko.BadAuthenticationType as e:
         logging.warning(f"{client_ip} - Bad authentication type: {str(e)}")
     except paramiko.AuthenticationException as e:
